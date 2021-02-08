@@ -1,24 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: UTF-8 -*-
-
-# Copyright 2016 Timothy Dozat
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import tensorflow as tf
 from collections import Counter
@@ -31,11 +10,11 @@ from metabucket import Metabucket
 #***************************************************************
 class Dataset(Configurable):
   """"""
-  
+
   #=============================================================
   def __init__(self, filename, vocabs, builder, *args, **kwargs):
     """"""
-    
+
     super(Dataset, self).__init__(*args, **kwargs)
     self._file_iterator = self.file_iterator(filename)
     self._train = (filename == self.train_file)
@@ -43,15 +22,15 @@ class Dataset(Configurable):
     self._data = None
     self.vocabs = vocabs
     self.rebucket()
-    
+
     self.inputs = tf.placeholder(dtype=tf.int32, shape=(None,None,None), name='inputs')
     self.targets = tf.placeholder(dtype=tf.int32, shape=(None,None,None), name='targets')
     self.builder = builder()
-  
+
   #=============================================================
   def file_iterator(self, filename):
     """"""
-    
+
     with open(filename) as f:
       if self.lines_per_buffer > 0:
         buff = [[]]
@@ -92,11 +71,11 @@ class Dataset(Configurable):
         buff = self._process_buff(buff)
         while True:
           yield buff
-  
+
   #=============================================================
   def _process_buff(self, buff):
     """"""
-    
+
     words, tags, rels = self.vocabs
     for i, sent in enumerate(buff):
       for j, token in enumerate(sent):
@@ -104,43 +83,43 @@ class Dataset(Configurable):
         buff[i][j] = (word,) + words[word] + tags[tag1] + tags[tag2] + (int(head),) + rels[rel]
       sent.insert(0, ('root', Vocab.ROOT, Vocab.ROOT, Vocab.ROOT, Vocab.ROOT, 0, Vocab.ROOT))
     return buff
-  
+
   #=============================================================
   def reset(self, sizes):
     """"""
-    
+
     self._data = []
     self._targets = []
     self._metabucket.reset(sizes)
     return
-  
+
   #=============================================================
   def rebucket(self):
     """"""
-    
+
     buff = self._file_iterator.next()
     len_cntr = Counter()
-    
+
     for sent in buff:
       len_cntr[len(sent)] += 1
     self.reset(KMeans(self.n_bkts, len_cntr).splits)
-    
+
     for sent in buff:
       self._metabucket.add(sent)
     self._finalize()
     return
-  
+
   #=============================================================
   def _finalize(self):
     """"""
-    
+
     self._metabucket._finalize()
     return
-  
+
   #=============================================================
   def get_minibatches(self, batch_size, input_idxs, target_idxs, shuffle=True):
     """"""
-    
+
     minibatches = []
     for bkt_idx, bucket in enumerate(self._metabucket):
       if batch_size == 0:
@@ -167,7 +146,7 @@ class Dataset(Configurable):
         self.targets: data[:,:maxlen,target_idxs]
       })
       yield feed_dict, sents
-  
+
   #=============================================================
   @property
   def n_bkts(self):
@@ -175,7 +154,7 @@ class Dataset(Configurable):
       return super(Dataset, self).n_bkts
     else:
       return super(Dataset, self).n_valid_bkts
-  
+
   #=============================================================
   def __getitem__(self, key):
     return self._metabucket[key]

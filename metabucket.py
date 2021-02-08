@@ -1,24 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# Copyright 2016 Timothy Dozat
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import tensorflow as tf
 
@@ -28,11 +7,11 @@ from bucket import Bucket
 #***************************************************************
 class Metabucket(Configurable):
   """"""
-  
+
   #=============================================================
   def __init__(self, *args, **kwargs):
     """"""
-    
+
     name = kwargs.get('name', 'Sents')
     self._n_bkts = kwargs.pop('n_bkts', None)
     super(Metabucket, self).__init__(*args, **kwargs)
@@ -43,11 +22,11 @@ class Metabucket(Configurable):
     self._data = None
     self._len2bkt = None
     return
-  
+
   #=============================================================
   def reset(self, sizes, pad=False):
     """"""
-    
+
     if pad:
       self._data = [(0,0)]
     else:
@@ -60,29 +39,29 @@ class Metabucket(Configurable):
       self._len2bkt.update(zip(range(prev_size+1, size+1), [bkt_idx]*(size-prev_size)))
       prev_size=size
     return
-  
+
   #=============================================================
   def add(self, sent):
     """"""
-    
+
     if isinstance(self._data, np.ndarray):
       raise TypeError("The buckets have already been finalized, you can't add more to them")
-    
+
     bkt_idx = self._len2bkt[len(sent)]
     idx = self._buckets[bkt_idx].add(sent)
     self._data.append( (bkt_idx, idx) )
     return len(self._data)-1
-  
+
   #=============================================================
   def _finalize(self):
     """"""
-    
+
     for bucket in self:
       bucket._finalize()
-    
+
     self._data = np.array(self._data)
     return
-  
+
   #=============================================================
   @property
   def n_bkts(self):
@@ -93,7 +72,7 @@ class Metabucket(Configurable):
   @property
   def size(self):
     return self.data.shape[0]
-  
+
   #=============================================================
   def __iter__(self):
     return (bucket for bucket in self._buckets)

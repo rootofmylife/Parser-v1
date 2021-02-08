@@ -1,24 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# Copyright 2016 Timothy Dozat
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import sys
 import time
@@ -38,26 +17,26 @@ from dataset import Dataset
 #***************************************************************
 class Network(Configurable):
   """"""
-  
+
   #=============================================================
   def __init__(self, model, *args, **kwargs):
     """"""
-    
+
     if args:
       if len(args) > 1:
         raise TypeError('Parser takes at most one argument')
-    
+
     kwargs['name'] = kwargs.pop('name', model.__name__)
     super(Network, self).__init__(*args, **kwargs)
     if not os.path.isdir(self.save_dir):
       os.mkdir(self.save_dir)
     with open(os.path.join(self.save_dir, 'config.cfg'), 'w') as f:
       self._config.write(f)
-      
+
     self._global_step = tf.Variable(0., trainable=False)
     self._global_epoch = tf.Variable(0., trainable=False)
     self._model = model(self._config, global_step=self.global_step)
-    
+
     self._vocabs = []
     vocab_files = [(self.word_file, 1, 'Words'),
                    (self.tag_file, [3, 4], 'Tags'),
@@ -69,11 +48,11 @@ class Network(Configurable):
                     use_pretrained=(not i),
                     global_step=self.global_step)
       self._vocabs.append(vocab)
-    
+
     self._trainset = Dataset(self.train_file, self._vocabs, model, self._config, name='Trainset')
     self._validset = Dataset(self.valid_file, self._vocabs, model, self._config, name='Validset')
     self._testset = Dataset(self.test_file, self._vocabs, model, self._config, name='Testset')
-    
+
     self._ops = self._gen_ops()
     self._save_vars = filter(lambda x: u'Pretrained' not in x.name, tf.all_variables())
     self.history = {
@@ -84,41 +63,41 @@ class Network(Configurable):
       'test_acuracy': 0
     }
     return
-  
+
   #=============================================================
   def train_minibatches(self):
     """"""
-    
+
     return self._trainset.get_minibatches(self.train_batch_size,
                                           self.model.input_idxs,
                                           self.model.target_idxs)
-  
+
   #=============================================================
   def valid_minibatches(self):
     """"""
-    
+
     return self._validset.get_minibatches(self.test_batch_size,
                                           self.model.input_idxs,
                                           self.model.target_idxs,
                                           shuffle=False)
-  
+
   #=============================================================
   def test_minibatches(self):
     """"""
-    
+
     return self._testset.get_minibatches(self.test_batch_size,
                                           self.model.input_idxs,
                                           self.model.target_idxs,
                                           shuffle=False)
-  
+
   #=============================================================
   # assumes the sess has already been initialized
   def train(self, sess):
     """"""
-    
+
     save_path = os.path.join(self.save_dir, self.name.lower() + '-pretrained')
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    
+
     n_bkts = self.n_bkts
     train_iters = self.train_iters
     print_every = self.print_every
@@ -209,12 +188,12 @@ class Network(Configurable):
       pass
     self.test(sess, validate=True)
     return
-    
+
   #=============================================================
   # TODO make this work if lines_per_buff isn't set to 0
   def test(self, sess, validate=False):
     """"""
-    
+
     if validate:
       filename = self.valid_file
       minibatches = self.valid_minibatches
@@ -225,7 +204,7 @@ class Network(Configurable):
       minibatches = self.test_minibatches
       dataset = self._testset
       op = self.ops['test_op'][1]
-    
+
     all_predictions = [[]]
     all_sents = [[]]
     bkt_idx = 0
@@ -262,11 +241,11 @@ class Network(Configurable):
       s, _ = self.model.evaluate(os.path.join(self.save_dir, os.path.basename(filename)), punct=self.model.PUNCT)
       f.write(s)
     return
-  
+
   #=============================================================
   def savefigs(self, sess, optimizer=False):
     """"""
-    
+
     import gc
     import matplotlib as mpl
     mpl.use('Agg')
@@ -293,19 +272,19 @@ class Network(Configurable):
         plt.close()
         del mat
         gc.collect()
-    
+
   #=============================================================
   def _gen_ops(self):
     """"""
-    
+
     optimizer = optimizers.RadamOptimizer(self._config, global_step=self.global_step)
     train_output = self._model(self._trainset)
-    
+
     train_op = optimizer.minimize(train_output['loss'])
     # These have to happen after optimizer.minimize is called
     valid_output = self._model(self._validset, moving_params=optimizer)
     test_output = self._model(self._testset, moving_params=optimizer)
-    
+
     ops = {}
     ops['train_op'] = [train_op,
                        train_output['loss'],
@@ -318,9 +297,9 @@ class Network(Configurable):
     ops['test_op'] = [valid_output['probabilities'],
                       test_output['probabilities']]
     ops['optimizer'] = optimizer
-    
+
     return ops
-    
+
   #=============================================================
   @property
   def global_step(self):
@@ -346,65 +325,48 @@ class Network(Configurable):
   @property
   def save_vars(self):
     return self._save_vars
-  
+
 #***************************************************************
 if __name__ == '__main__':
   """"""
-  
+
   import argparse
-  
+
   argparser = argparse.ArgumentParser()
   argparser.add_argument('--test', action='store_true')
   argparser.add_argument('--load', action='store_true')
   argparser.add_argument('--model', default='Parser')
   argparser.add_argument('--matrix', action='store_true')
-  
+
   args, extra_args = argparser.parse_known_args()
-  cargs = {k: v for (k, v) in vars(Configurable.argparser.parse_args(extra_args)).iteritems() if v is not None}
-  
-  print('*** '+args.model+' ***')
+  cargs = {k: v for (k, v) in vars(Configurable.argparser.parse_args(extra_args)).items() if v is not None}
+
+  print('*** ' + args.model + ' ***')
   model = getattr(models, args.model)
-  
+
   if 'save_dir' in cargs and os.path.isdir(cargs['save_dir']) and not (args.test or args.matrix or args.load):
     raw_input('Save directory already exists. Press <Enter> to overwrite or <Ctrl-C> to exit.')
   if (args.test or args.load or args.matrix) and 'save_dir' in cargs:
     cargs['config_file'] = os.path.join(cargs['save_dir'], 'config.cfg')
   network = Network(model, **cargs)
-  os.system('echo Model: %s > %s/MODEL' % (network.model.__class__.__name__, network.save_dir))
-  #print([v.name for v in network.save_vars])
+  print([v.name for v in network.save_vars])
   config_proto = tf.ConfigProto()
   config_proto.gpu_options.per_process_gpu_memory_fraction = network.per_process_gpu_memory_fraction
   with tf.Session(config=config_proto) as sess:
     sess.run(tf.initialize_all_variables())
     if not (args.test or args.matrix):
       if args.load:
-        os.system('echo Training: > %s/HEAD' % network.save_dir)
-        os.system('git rev-parse HEAD >> %s/HEAD' % network.save_dir)
         saver = tf.train.Saver(var_list=network.save_vars)
         saver.restore(sess, tf.train.latest_checkpoint(network.save_dir, latest_filename=network.name.lower()))
         if os.path.isfile(os.path.join(network.save_dir, 'history.pkl')):
           with open(os.path.join(network.save_dir, 'history.pkl')) as f:
             network.history = pkl.load(f)
-      else:
-        os.system('echo Loading: >> %s/HEAD' % network.save_dir)
-        os.system('git rev-parse HEAD >> %s/HEAD' % network.save_dir)
       network.train(sess)
     elif args.matrix:
       saver = tf.train.Saver(var_list=network.save_vars)
       saver.restore(sess, tf.train.latest_checkpoint(network.save_dir, latest_filename=network.name.lower()))
-      # TODO make this save pcolor plots of all matrices to a directory in save_dir
-      #with tf.variable_scope('RNN0/BiRNN_FW/LSTMCell/Linear', reuse=True):
-      #  pkl.dump(sess.run(tf.get_variable('Weights')), open('mat0.pkl', 'w'))
-      #with tf.variable_scope('RNN1/BiRNN_FW/LSTMCell/Linear', reuse=True):
-      #  pkl.dump(sess.run(tf.get_variable('Weights')), open('mat1.pkl', 'w'))
-      #with tf.variable_scope('RNN2/BiRNN_FW/LSTMCell/Linear', reuse=True):
-      #  pkl.dump(sess.run(tf.get_variable('Weights')), open('mat2.pkl', 'w'))
-      #with tf.variable_scope('MLP/Linear', reuse=True):
-      #  pkl.dump(sess.run(tf.get_variable('Weights')), open('mat3.pkl', 'w'))
       network.savefigs(sess)
     else:
-      os.system('echo Testing: >> %s/HEAD' % network.save_dir)
-      os.system('git rev-parse HEAD >> %s/HEAD' % network.save_dir)
       saver = tf.train.Saver(var_list=network.save_vars)
       saver.restore(sess, tf.train.latest_checkpoint(network.save_dir, latest_filename=network.name.lower()))
       network.test(sess, validate=True)

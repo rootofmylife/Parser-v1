@@ -1,56 +1,35 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# Copyright 2016 Timothy Dozat
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import argparse
 import numpy as np
 import tensorflow as tf
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 #***************************************************************
 class Configurable(object):
   """"""
-  
+
   #=============================================================
   def __init__(self, *args, **kwargs):
     """"""
-    
+
     self._name = kwargs.pop('name', type(self).__name__)
     if args and kwargs:
       raise TypeError('Configurables must take either a config parser or keyword args')
     if args:
       if len(args) > 1:
         raise TypeError('Configurables take at most one argument')
-    
+
     if args:
       self._config = args[0]
     else:
       self._config = self._configure(**kwargs)
     return
-  
+
   #=============================================================
   def _configure(self, **kwargs):
     """"""
-    
+
     config = SafeConfigParser()
     config_files = [os.path.join('config', 'defaults.cfg'),
                     os.path.join('config', self.name.lower() + '.cfg'),
@@ -65,20 +44,20 @@ class Configurable(object):
           break
       if not assigned:
         raise ValueError('%s is not a valid option.' % option)
-    
+
     return config
-  
+
   #=============================================================
   argparser = argparse.ArgumentParser()
   argparser.add_argument('--config_file')
   argparser.add_argument('--data_dir')
   argparser.add_argument('--embed_dir')
-  
+
   @property
   def name(self):
     return self._name
   argparser.add_argument('--name')
-  
+
   #=============================================================
   # [OS]
   @property
@@ -117,7 +96,7 @@ class Configurable(object):
   def save_dir(self):
     return self._config.get('OS', 'save_dir')
   argparser.add_argument('--save_dir')
-  
+
   #=============================================================
   # [Dataset]
   @property
@@ -156,7 +135,7 @@ class Configurable(object):
   def lines_per_buffer(self):
     return self._config.getint('Dataset', 'lines_per_buffer')
   argparser.add_argument('--lines_per_buffer')
-  
+
   #=============================================================
   # [Layers]
   @property
@@ -180,7 +159,7 @@ class Configurable(object):
     else:
       return self._config.getfloat('Layers', 'forget_bias')
   argparser.add_argument('--forget_bias')
-  
+
   #=============================================================
   # [Sizes]
   @property
@@ -203,7 +182,7 @@ class Configurable(object):
   def info_mlp_size(self):
     return self._config.getint('Sizes', 'info_mlp_size')
   argparser.add_argument('--info_mlp_size')
-  
+
   #=============================================================
   # [Functions]
   @property
@@ -236,14 +215,14 @@ class Configurable(object):
     else:
       return getattr(tf.nn, func)
   argparser.add_argument('--mlp_func')
-  
+
   #=============================================================
   # [Regularization]
   @property
   def word_l2_reg(self):
     return self._config.getfloat('Regularization', 'word_l2_reg')
   argparser.add_argument('--word_l2_reg')
-  
+
   #=============================================================
   # [Dropout]
   @property
@@ -282,7 +261,7 @@ class Configurable(object):
   def info_keep_prob(self):
     return self._config.getfloat('Dropout', 'info_keep_prob')
   argparser.add_argument('--info_keep_prob')
-  
+
   #=============================================================
   # [Learning rate]
   @property
@@ -301,7 +280,7 @@ class Configurable(object):
   def clip(self):
     return self._config.getfloat('Learning rate', 'clip')
   argparser.add_argument('--clip')
-  
+
   #=============================================================
   # [Radam]
   @property
@@ -324,7 +303,7 @@ class Configurable(object):
   def chi(self):
     return self._config.getfloat('Radam', 'chi')
   argparser.add_argument('--chi')
-  
+
   #=============================================================
   # [Training]
   @property
@@ -359,4 +338,3 @@ class Configurable(object):
   def per_process_gpu_memory_fraction(self):
     return self._config.getfloat('Training', 'per_process_gpu_memory_fraction')
   argparser.add_argument('--per_process_gpu_memory_fraction')
-  
